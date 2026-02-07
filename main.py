@@ -50,3 +50,34 @@ def takimlari_grupla():
         takimlar[takim].append(oyuncu)
     
     return takimlar
+
+# --- YENİ EKLENEN KISIM: KULÜPLER ---
+
+# 1. Tüm Kulüpleri Listele
+@app.get("/kulupler", dependencies=[Depends(get_api_key)])
+def kulupleri_listele():
+    conn = baglanti_kur()
+    veriler = conn.execute("SELECT * FROM kulupler").fetchall()
+    conn.close()
+    return veriler
+
+# 2. Kulüp Detayı ve Oyuncularını Birlikte Getir (Gelişmiş)
+@app.get("/kulupler/{takim_adi}", dependencies=[Depends(get_api_key)])
+def kulup_detayi_getir(takim_adi: str):
+    conn = baglanti_kur()
+    
+    # Önce kulüp bilgilerini çek
+    kulup_bilgisi = conn.execute("SELECT * FROM kulupler WHERE Team LIKE ?", (f"%{takim_adi}%",)).fetchone()
+    
+    if not kulup_bilgisi:
+        return {"Hata": "Böyle bir kulüp bulunamadı."}
+    
+    # Sonra o kulübün oyuncularını çek
+    oyuncular = conn.execute("SELECT * FROM oyuncular WHERE Team LIKE ?", (f"%{takim_adi}%",)).fetchall()
+    conn.close()
+    
+    # İkisini birleştirip tek paket yap
+    return {
+        "KulupBilgileri": kulup_bilgisi,
+        "Kadro": oyuncular
+    }
